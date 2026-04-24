@@ -1,0 +1,570 @@
+/********************************************************************************
+* 
+* McStas, neutron ray-tracing package
+*         Copyright (C) 1997-2008, All rights reserved
+*         Risoe National Laboratory, Roskilde, Denmark
+*         Institut Laue Langevin, Grenoble, France
+* 
+* This file was written by McStasScript, which is a 
+* python based McStas instrument generator written by 
+* Mads Bertelsen in 2019 while employed at the 
+* European Spallation Source Data Management and 
+* Software Centre
+* 
+* Instrument: ISIS_LET_generated
+* 
+* %Identification
+* Written by: McCode Py-Generator
+* Date: 15:42:17 on April 23, 2026
+* Origin: ESS DMSC
+* %INSTRUMENT_SITE: Generated_instruments
+* 
+* !!Please write a short instrument description (1 line) here!!
+* 
+* %Description
+* Please write a longer instrument description here!
+* 
+* 
+* %Parameters
+* Ei: [unit] Parameter type (double) added by McCode py-generator
+* dE: [unit] Parameter type (double) added by McCode py-generator
+* Ch3_speed: [unit] Parameter type (double) added by McCode py-generator
+* Ch5_speed: [unit] Parameter type (double) added by McCode py-generator
+* Ch2_phase: [unit] Parameter type (double) added by McCode py-generator
+* pha_offset: [unit] Parameter type (double) added by McCode py-generator
+* res: [unit] Parameter type (string) added by McCode py-generator
+* snout: [unit] Parameter type (string) added by McCode py-generator
+* monitors_on: [unit] Parameter type (int) added by McCode py-generator
+* movable_monitors: [unit] Parameter type (int) added by McCode py-generator
+* sample_coh: [unit] Parameter type (string) added by McCode py-generator
+* sample_inc: [unit] Parameter type (string) added by McCode py-generator
+* 
+* %Link 
+* 
+* %End 
+********************************************************************************/
+
+DEFINE INSTRUMENT ISIS_LET_generated (
+double Ei = 3.7, // Parameter type (double) added by McCode py-generator
+double dE = 1.1, // Parameter type (double) added by McCode py-generator
+double Ch3_speed = 100, // Parameter type (double) added by McCode py-generator
+double Ch5_speed = 200, // Parameter type (double) added by McCode py-generator
+double Ch2_phase = 95000, // Parameter type (double) added by McCode py-generator
+double pha_offset = 8e-05, // Parameter type (double) added by McCode py-generator
+string res = "HF", // Parameter type (string) added by McCode py-generator
+string snout = "out", // Parameter type (string) added by McCode py-generator
+int monitors_on = 1, // Parameter type (int) added by McCode py-generator
+int movable_monitors = 0, // Parameter type (int) added by McCode py-generator
+string sample_coh = "/Users/bb24144/Documents/McStas/let_scipp/produce_sqw/benz_coh_test.sqw", // Parameter type (string) added by McCode py-generator
+string sample_inc = "/Users/bb24144/Documents/McStas/let_scipp/produce_sqw/benz_inc_test.sqw" // Parameter type (string) added by McCode py-generator
+)
+
+DECLARE 
+%{
+
+double SE2K, v_foc, emin, emax, lam_min, lam_max, jitter=7e-7;
+double Ch1_speed, Ch2_speed=10, Ch2_offset=14500, Ch4_speed, Ch5_slit, snout_length;
+double L_Ch1=7.833, L_Ch2=8.200, L_Ch3=11.749, L_Ch4=15.664, L_Ch5=23.499;
+double L_sample=25, L2=3.5, Ch1_5_halfgap=0.005, smidge = 0.001;
+    
+%}
+
+INITIALIZE 
+%{
+// Start of initialize for generated ISIS_LET_generated
+
+
+// get chopper5 slit width and speeds from resolution setting
+if (strcmp(res,"HR") == 0){
+	Ch5_slit = 0.015;
+	Ch1_speed = Ch5_speed / 2;
+} else if (strcmp(res,"I") == 0){
+	Ch5_slit = 0.02;
+	Ch1_speed = Ch5_speed / 4;
+} else if (strcmp(res,"HF") == 0){
+	Ch5_slit = 0.028;
+	Ch1_speed = Ch5_speed / 4;
+} else {
+	printf("\n Need valid resolution option, 'HR', 'I' or 'HF'\n");
+}
+
+// decide whether snout is in or out
+if (strcmp(snout,"out") == 0){
+	snout_length = 0.0;
+} else {
+	snout_length = 0.23;
+}
+
+SE2K	= SE2V * V2K;
+v_foc	= SE2V * sqrt(Ei);
+emax	= Ei*dE;
+emin	= Ei/dE;
+lam_min   	= 2 * PI / SE2K / sqrt(emax);
+lam_max 	= 2 * PI / SE2K / sqrt(emin);
+
+printf("\nv_foc: %f", v_foc);
+printf("\nChopper 1 delay: %f\n", (L_Ch1 - Ch1_5_halfgap)/v_foc+pha_offset);
+printf("\nEnergy range: Emin = %f, Emax = %f\n", emin, emax);
+    
+%}
+
+TRACE 
+COMPONENT Origin = Arm()
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT SourceMantid = Commodus_I3(
+ Face = "Let_TS2_HydroMod_Upgrade2021_8cmThick.mcstas", E0 = emin,
+ E1 = emax, modPosition = 0,
+ dist = 1.68, verbose = 0,
+ beamcurrent = 1, modXsize = 0.12,
+ modZsize = 0.12, xw = 0.04,
+ yh = 0.09)
+AT (0, 0, 0) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT shutter = Guide_channeled(
+ w1 = 0.04, h1 = 0.09,
+ w2 = 0, h2 = 0,
+ l = 1.980, R0 = 0.995,
+ Qc = 0, alpha = 4.38,
+ m = 0, nslit = 1,
+ d = 0.0005, Qcx = 0.0218,
+ Qcy = 0.0218, alphax = 4.38,
+ alphay = 4.38, W = 3e-3,
+ mx = 2, my = 3,
+ nu = 0, phase = 0)
+AT (0, 0, 1.680) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT insert = Guide_channeled(
+ w1 = 0.04, h1 = 0.09,
+ w2 = 0, h2 = 0,
+ l = 2.500, R0 = 0.995,
+ Qc = 0, alpha = 4.38,
+ m = 0, nslit = 1,
+ d = 0.0005, Qcx = 0.0218,
+ Qcy = 0.0218, alphax = 4.38,
+ alphay = 4.38, W = 3e-3,
+ mx = 2, my = 3,
+ nu = 0, phase = 0)
+AT (0, 0, 3.740) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT after_insert = Guide_channeled(
+ w1 = 0.04, h1 = 0.09,
+ w2 = 0, h2 = 0,
+ l = 1.514, R0 = 0.995,
+ Qc = 0, alpha = 4.38,
+ m = 0, nslit = 1,
+ d = 0.0005, Qcx = 0.0218,
+ Qcy = 0.0218, alphax = 4.38,
+ alphay = 4.38, W = 3e-3,
+ mx = 2, my = 3,
+ nu = 0, phase = 0)
+AT (0, 0, 6.300) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT Monitor1 = TOF_monitor(
+ nt = 100, filename = "monitor1.dat",
+ xmin = -0.05, xmax = 0.05,
+ ymin = -0.05, ymax = 0.05,
+ xwidth = 0.06, yheight = 0.1,
+ tmin = 1e6 * ( ( L_Ch1 - Ch1_5_halfgap - smidge ) / SE2V / sqrt ( emax ) + pha_offset ), tmax = 1e6 * ( ( L_Ch1 - Ch1_5_halfgap - smidge ) / SE2V / sqrt ( emin ) + pha_offset ),
+ dt = 1.0, restore_neutron = 1,
+ nowritefile = ! monitors_on)
+WHEN (monitors_on == 1)
+AT (0, 0, L_Ch1 - Ch1_5_halfgap - smidge) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT LET_Chopper1_disk1 = DiskChopper(
+ theta_0 = 0, radius = 0.350,
+ yheight = 0.095, nu = Ch1_speed,
+ nslit = 6, jitter = jitter,
+ delay = ( L_Ch1 - Ch1_5_halfgap ) / v_foc + pha_offset, isfirst = 0,
+ n_pulse = 1, abs_out = 1,
+ phase = 0, xwidth = 0.056,
+ verbose = 0)
+AT (0, 0, L_Ch1 - Ch1_5_halfgap) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT LET_Chopper1_disk2 = DiskChopper(
+ theta_0 = 0, radius = 0.350,
+ yheight = 0.095, nu = Ch1_speed,
+ nslit = 6, jitter = jitter,
+ delay = ( L_Ch1 + Ch1_5_halfgap ) / v_foc + pha_offset, isfirst = 0,
+ n_pulse = 1, abs_out = 1,
+ phase = 0, xwidth = 0.056,
+ verbose = 0)
+AT (0, 0, ( L_Ch1 + Ch1_5_halfgap )) RELATIVE Origin
+ROTATED (0, 0, 180) RELATIVE LET_Chopper1_disk1
+
+COMPONENT Monitor2 = TOF_monitor(
+ nt = 100, filename = "monitor2.dat",
+ xmin = -0.05, xmax = 0.05,
+ ymin = -0.05, ymax = 0.05,
+ xwidth = 0.06, yheight = 0.1,
+ tmin = 1e6 * ( ( L_Ch1 + Ch1_5_halfgap + smidge ) / SE2V / sqrt ( emax ) + pha_offset ), tmax = 1e6 * ( ( L_Ch1 + Ch1_5_halfgap + smidge ) / SE2V / sqrt ( emin ) + pha_offset ),
+ dt = 1.0, restore_neutron = 1,
+ nowritefile = ! monitors_on)
+WHEN (monitors_on == 1)
+AT (0, 0, L_Ch1 + Ch1_5_halfgap + smidge) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT between_chop1_and_chop2 = Guide_channeled(
+ w1 = 0.04, h1 = 0.09,
+ w2 = 0, h2 = 0,
+ l = 0.312, R0 = 0.995,
+ Qc = 0, alpha = 4.38,
+ m = 0, nslit = 1,
+ d = 0.0005, Qcx = 0.0218,
+ Qcy = 0.0218, alphax = 4.38,
+ alphay = 4.38, W = 3e-3,
+ mx = 2, my = 3,
+ nu = 0, phase = 0)
+AT (0, 0, 7.852) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT LET_Chopper2 = DiskChopper(
+ theta_0 = 0, radius = 0.600,
+ yheight = 0.107, nu = Ch2_speed,
+ nslit = 1, jitter = jitter,
+ delay = ( Ch2_phase + Ch2_offset ) / 1e6, isfirst = 0,
+ n_pulse = 1, abs_out = 1,
+ phase = 0, xwidth = 0.79,
+ verbose = 0)
+AT (0, 0, L_Ch2) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT Monitor3 = TOF_monitor(
+ nt = 100, filename = "monitor3.dat",
+ xmin = -0.05, xmax = 0.05,
+ ymin = -0.05, ymax = 0.05,
+ xwidth = 0.06, yheight = 0.1,
+ tmin = 1e6 * ( ( L_Ch2 + smidge ) / SE2V / sqrt ( emax ) + pha_offset ), tmax = 1e6 * ( ( L_Ch2 + smidge ) / SE2V / sqrt ( emin ) + pha_offset ),
+ dt = 1.0, restore_neutron = 1,
+ nowritefile = ! monitors_on)
+WHEN (monitors_on == 1)
+AT (0, 0, L_Ch2 + smidge) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT between_chop2_and_chop3 = Guide_channeled(
+ w1 = 0.04, h1 = 0.09,
+ w2 = 0, h2 = 0,
+ l = 3.499, R0 = 0.995,
+ Qc = 0, alpha = 4.38,
+ m = 0, nslit = 1,
+ d = 0.0005, Qcx = 0.0218,
+ Qcy = 0.0218, alphax = 4.38,
+ alphay = 4.38, W = 3e-3,
+ mx = 2, my = 3,
+ nu = 0, phase = 0)
+AT (0, 0, 8.236) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT LET_Chopper3 = DiskChopper(
+ theta_0 = 0, radius = 0.340,
+ yheight = 0.090, nu = Ch3_speed,
+ nslit = 2, jitter = jitter,
+ delay = L_Ch3 / v_foc + pha_offset, isfirst = 0,
+ n_pulse = 1, abs_out = 1,
+ phase = 0, xwidth = 0.045,
+ verbose = 0)
+AT (0, 0, L_Ch3) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT Monitor4 = TOF_monitor(
+ nt = 100, filename = "monitor4.dat",
+ xmin = -0.05, xmax = 0.05,
+ ymin = -0.05, ymax = 0.05,
+ xwidth = 0.06, yheight = 0.1,
+ tmin = 1e6 * ( ( L_Ch3 + smidge ) / SE2V / sqrt ( emax ) + pha_offset ), tmax = 1e6 * ( ( L_Ch3 + smidge ) / SE2V / sqrt ( emin ) + pha_offset ),
+ dt = 1.0, restore_neutron = 1,
+ nowritefile = ! monitors_on)
+WHEN (monitors_on == 1)
+AT (0, 0, L_Ch3 + smidge) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT between_chop3_and_chop4 = Guide_channeled(
+ w1 = 0.04, h1 = 0.09,
+ w2 = 0, h2 = 0,
+ l = 3.886, R0 = 0.995,
+ Qc = 0, alpha = 4.38,
+ m = 0, nslit = 1,
+ d = 0.0005, Qcx = 0.0218,
+ Qcy = 0.0218, alphax = 4.38,
+ alphay = 4.38, W = 3e-3,
+ mx = 2, my = 3,
+ nu = 0, phase = 0)
+AT (0, 0, 11.765) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT LET_Chopper4 = DiskChopper(
+ theta_0 = 0, radius = 0.338,
+ yheight = 0.090, nu = Ch5_speed / 2,
+ nslit = 6, jitter = jitter,
+ delay = L_Ch4 / v_foc + pha_offset, isfirst = 0,
+ n_pulse = 1, abs_out = 1,
+ phase = 0, xwidth = 0.045,
+ verbose = 0)
+AT (0, 0, L_Ch4) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT Monitor5 = TOF_monitor(
+ nt = 100, filename = "monitor5.dat",
+ xmin = -0.05, xmax = 0.05,
+ ymin = -0.05, ymax = 0.05,
+ xwidth = 0.06, yheight = 0.08,
+ tmin = 1e6 * ( ( L_Ch4 + smidge ) / SE2V / sqrt ( emax ) + pha_offset ), tmax = 1e6 * ( ( L_Ch4 + smidge ) / SE2V / sqrt ( emin ) + pha_offset ),
+ dt = 1.0, restore_neutron = 1,
+ nowritefile = ! monitors_on)
+WHEN (monitors_on == 1)
+AT (0, 0, L_Ch4 + smidge) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT between_chop4_and_movable = Guide_channeled(
+ w1 = 0.04, h1 = 0.09,
+ w2 = 0, h2 = 0.0639,
+ l = 5.800, R0 = 0.995,
+ Qc = 0, alpha = 4.38,
+ m = 0, nslit = 1,
+ d = 0.0005, Qcx = 0.0218,
+ Qcy = 0.0218, alphax = 4.38,
+ alphay = 4.38, W = 3e-3,
+ mx = 2, my = 3,
+ nu = 0, phase = 0)
+AT (0, 0, 15.681) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT moveable_front_PSDmon = PSD_monitor(
+ nx = 50, ny = 50,
+ filename = "moveable_front_PSDmon.dat", xmin = -0.05,
+ xmax = 0.05, ymin = -0.05,
+ ymax = 0.05, xwidth = 0.06,
+ yheight = 0.08, restore_neutron = 1,
+ nowritefile = ! movable_monitors)
+WHEN (movable_monitors == 1)
+AT (0, 0, 21.485) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT moveable_front_Divmon = Divergence_monitor(
+ nh = 50, nv = 50,
+ filename = "moveable_front_Divmon.dat", xmin = -0.05,
+ xmax = 0.05, ymin = -0.05,
+ ymax = 0.05, nowritefile = ! movable_monitors,
+ xwidth = 0.06, yheight = 0.08,
+ maxdiv_h = 3, maxdiv_v = 3,
+ restore_neutron = 1, nx = 0,
+ ny = 0, nz = 1)
+WHEN (movable_monitors == 1)
+AT (0, 0, 21.485) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT moveable_guide = Guide_channeled(
+ w1 = 0.04, h1 = 0.0639,
+ w2 = 0.0311, h2 = 0.05718,
+ l = 0.8813, R0 = 0.995,
+ Qc = 0, alpha = 4.38,
+ m = 4, nslit = 1,
+ d = 0.0005, Qcx = 0.0218,
+ Qcy = 0.0218, alphax = 4.38,
+ alphay = 4.38, W = 3e-3,
+ mx = 1, my = 1,
+ nu = 0, phase = 0)
+AT (0, 0, 21.489) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT moveable_back_PSDmon = PSD_monitor(
+ nx = 100, ny = 100,
+ filename = "moveable_back_PSDmon.dat", xmin = -0.05,
+ xmax = 0.05, ymin = -0.05,
+ ymax = 0.05, xwidth = 0.06,
+ yheight = 0.08, restore_neutron = 1,
+ nowritefile = ! movable_monitors)
+WHEN (movable_monitors == 1)
+AT (0, 0, 22.372) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT moveable_back_Divmon = Divergence_monitor(
+ nh = 50, nv = 50,
+ filename = "moveable_back_Divmon.dat", xmin = -0.05,
+ xmax = 0.05, ymin = -0.05,
+ ymax = 0.05, nowritefile = ! movable_monitors,
+ xwidth = 0.06, yheight = 0.08,
+ maxdiv_h = 3, maxdiv_v = 3,
+ restore_neutron = 1, nx = 0,
+ ny = 0, nz = 1)
+WHEN (movable_monitors == 1)
+AT (0, 0, 22.372) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT funnel = Guide_channeled(
+ w1 = 0.031, h1 = 0.05711,
+ w2 = 0.02, h2 = 0.04868,
+ l = 1.107, R0 = 0.995,
+ Qc = 0, alpha = 4.38,
+ m = 4, nslit = 1,
+ d = 0.0005, Qcx = 0.0218,
+ Qcy = 0.0218, alphax = 4.38,
+ alphay = 4.38, W = 3e-3,
+ mx = 1, my = 1,
+ nu = 0, phase = 0)
+AT (0, 0, 22.373) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT LET_Chopper5_Disk1 = DiskChopper(
+ theta_0 = 0, radius = 0.350,
+ yheight = 0.06, nu = Ch5_speed,
+ nslit = 1, jitter = jitter,
+ delay = ( L_Ch5 - Ch1_5_halfgap ) / v_foc + pha_offset, isfirst = 0,
+ n_pulse = 1, abs_out = 1,
+ phase = 0, xwidth = Ch5_slit,
+ verbose = 0)
+AT (0, 0, L_Ch5 - Ch1_5_halfgap) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT LET_Chopper5_Disk2 = DiskChopper(
+ theta_0 = 0, radius = 0.350,
+ yheight = 0.06, nu = Ch5_speed,
+ nslit = 1, jitter = jitter,
+ delay = ( L_Ch5 + Ch1_5_halfgap ) / v_foc + pha_offset, isfirst = 0,
+ n_pulse = 1, abs_out = 1,
+ phase = 0, xwidth = Ch5_slit,
+ verbose = 0)
+AT (0, 0, L_Ch5 + Ch1_5_halfgap) RELATIVE Origin
+ROTATED (0, 0, 180) RELATIVE LET_Chopper5_Disk1
+
+COMPONENT Monitor6 = TOF_monitor(
+ nt = 100, filename = "monitor6.dat",
+ xmin = -0.05, xmax = 0.05,
+ ymin = -0.05, ymax = 0.05,
+ xwidth = 0.06, yheight = 0.06,
+ tmin = 1e6 * ( ( L_Ch5 + Ch1_5_halfgap + smidge ) / SE2V / sqrt ( emax ) + pha_offset ), tmax = 1e6 * ( ( L_Ch5 + Ch1_5_halfgap + smidge ) / SE2V / sqrt ( emin ) + pha_offset ),
+ dt = 1.0, restore_neutron = 1,
+ nowritefile = ! monitors_on)
+WHEN (monitors_on == 1)
+AT (0, 0, L_Ch5 + Ch1_5_halfgap + smidge) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT tanksection = Guide_channeled(
+ w1 = 0.02, h1 = 0.0484,
+ w2 = 0.020, h2 = 0.04,
+ l = 1.1, R0 = 0.995,
+ Qc = 0, alpha = 4.38,
+ m = 4, nslit = 1,
+ d = 0.0005, Qcx = 0.0218,
+ Qcy = 0.0218, alphax = 4.38,
+ alphay = 4.38, W = 3e-3,
+ mx = 1, my = 1,
+ nu = 0, phase = 0)
+AT (0, 0, 23.52) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT snout = Guide_channeled(
+ w1 = 0.02, h1 = 0.04,
+ w2 = 0, h2 = 0,
+ l = snout_length, R0 = 0.995,
+ Qc = 0, alpha = 4.38,
+ m = 4, nslit = 1,
+ d = 0.0005, Qcx = 0.0218,
+ Qcy = 0.0218, alphax = 4.38,
+ alphay = 4.38, W = 3e-3,
+ mx = 1, my = 1,
+ nu = 0, phase = 0)
+AT (0, 0, 24.622) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT sample = Arm()
+AT (0, 0, L_sample) RELATIVE Origin
+ROTATED (0.0, 0.0, 0.0) RELATIVE Origin
+
+COMPONENT sample_PSDmon = PSD_monitor(
+ nx = 100, ny = 100,
+ filename = "sample_PSDmon.dat", xmin = -0.05,
+ xmax = 0.05, ymin = -0.05,
+ ymax = 0.05, xwidth = 0.04,
+ yheight = 0.06, restore_neutron = 1,
+ nowritefile = 0)
+AT (0, 0, 0) RELATIVE sample
+ROTATED (0.0, 0.0, 0.0) RELATIVE sample
+
+COMPONENT sample_Divmon = Divergence_monitor(
+ nh = 50, nv = 50,
+ filename = "sample_Divmon.dat", xmin = -0.05,
+ xmax = 0.05, ymin = -0.05,
+ ymax = 0.05, nowritefile = 0,
+ xwidth = 0.06, yheight = 0.06,
+ maxdiv_h = 3, maxdiv_v = 3,
+ restore_neutron = 1, nx = 0,
+ ny = 0, nz = 1)
+AT (0, 0, 0) RELATIVE sample
+ROTATED (0.0, 0.0, 0.0) RELATIVE sample
+
+COMPONENT sample_tof = TOF_monitor(
+ nt = 100, filename = "sample_tof.dat",
+ xmin = -0.05, xmax = 0.05,
+ ymin = -0.05, ymax = 0.05,
+ xwidth = 0.04, yheight = 0.06,
+ tmin = 1e6 * ( ( L_sample ) / SE2V / sqrt ( Ei ) + pha_offset ) * 0.99, tmax = 1e6 * ( ( L_sample ) / SE2V / sqrt ( Ei ) + pha_offset ) * 1.01,
+ dt = 1.0, restore_neutron = 1,
+ nowritefile = 0)
+AT (0, 0, 0) RELATIVE sample
+ROTATED (0.0, 0.0, 0.0) RELATIVE sample
+
+COMPONENT sample_Emon = E_monitor(
+ nE = 100, filename = "sample_Emon.dat",
+ xmin = -0.05, xmax = 0.05,
+ ymin = -0.05, ymax = 0.05,
+ nowritefile = 0, xwidth = 0.04,
+ yheight = 0.06, Emin = Ei - ( emax - emin ) / 12,
+ Emax = Ei + ( emax - emin ) / 6, restore_neutron = 1)
+AT (0, 0, 0) RELATIVE sample
+ROTATED (0.0, 0.0, 0.0) RELATIVE sample
+
+COMPONENT iso_samp = Isotropic_Sqw(
+ powder_format = { 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 }, Sqw_coh = sample_coh,
+ Sqw_inc = sample_inc, geometry = 0,
+ radius = 0.01, thickness = 0,
+ xwidth = 0, yheight = 0.055,
+ zdepth = 0, threshold = 1e-20,
+ order = 0, verbose = 1,
+ d_phi = 0, concentric = 0,
+ sigma_abs = 0, classical = 1,
+ powder_Dd = 0, powder_DW = 0,
+ powder_Vc = 0, density = 0,
+ weight = 0, p_interact = 0.2,
+ norm = -1, powder_barns = 1)
+AT (0, 0, 0) RELATIVE sample
+ROTATED (0.0, 0.0, 0.0) RELATIVE sample
+EXTEND %{
+
+if (!SCATTERED) ABSORB;
+    
+%}
+
+COMPONENT detectorArm = Arm()
+AT (0, 0, 0) RELATIVE sample
+ROTATED (0, 90, 0) RELATIVE sample
+
+COMPONENT Banana_1 = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0,
+ yheight = 0.1, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 1, options = "mantid banana theta bins=20 limits=[-10, 25] y bins=12, neutron pixel min=0 t, list all neutrons",
+ filename = "direct_event_banana_signal.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 0.0) RELATIVE sample
+ROTATED (0.0, 0.0, 0.0) RELATIVE sample
+
+FINALLY 
+%{
+// Start of finally for generated ISIS_LET_generated
+%}
+
+END
