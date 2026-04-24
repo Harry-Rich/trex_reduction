@@ -40,8 +40,6 @@ def produce_trex_event_object(event_object, data_path, monitor_name, to_s=1e-6):
 
 # Graph Functions
 
-inelastic = {}
-
 
 def straight_monitor_beam(
     source_position: VariableLike, monitor_position: VariableLike
