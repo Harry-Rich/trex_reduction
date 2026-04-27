@@ -4,20 +4,44 @@ import mcstastox as mx
 import scipp as sc
 from scipp.typing import VariableLike
 from scippneutron.conversion.beamline import _canonical_length
+from scipy.ndimage import label
 
 # Utility Functions
 
 
-def _calc_pulse_tof_centroid(tof_monitor, to_s=1e-6):
+def _calc_pulse_tof_centroid(tof_monitor,threshold=0, to_s=1e-6):
+    # Assumes all pulses are evenly spaced in xaxis - but isn't bin data??? confirm this
+    # Confirm correct way to axis tof data - is xaxis correct????? 
+    mask = tof_monitor.Intensity != threshold
+    labels, num_features = label(mask)
+    weighted_sum = np.bincount(labels, weights=tof_monitor.xaxis * tof_monitor.Intensity)[1:]
+    weight_total = np.bincount(labels, weights=tof_monitor.Intensity)[1:]
+
+    coms = weighted_sum / weight_total * to_s
+    return coms
+
+
+def _assign_time_on_monitor(event_object, pulse_centroids):
     """ """
-    # Doesn't deal with multiple pulses\
-    # Assumes all pulses are evenly spaced - but isn't bin data??? confirm this
-    # Confirm correct way to axis tof data - is xaxis correct?????
-    return (
-        np.sum(tof_monitor.xaxis * tof_monitor.Intensity)
-        / np.sum(tof_monitor.Intensity)
-        * to_s
-    )  # in seconds
+    # Binning for assigning time on monitor
+    # Ideally also need to calculate time between monitor and sample to calc inf energy cut offs for each pulse - but this is a start
+
+    edges = np.concatenate([[0], pulse_centroids[1:], [1e25]]) # scipp gets upset with np.inf? 
+    time_on_monitor_edges = sc.array(dims=['tof'], values=edges, unit='s')
+    binned = event_object.bin(tof=time_on_monitor_edges)
+
+
+    binned.coords['time_on_monitor'] = sc.array(
+        dims=['tof'], values=pulse_centroids, unit='s'
+    )
+
+    binned.bins.coords['time_on_monitor'] = sc.bins_like(
+        binned, binned.coords['time_on_monitor']
+    )
+
+    unbinned = binned.bins.constituents['data']
+    return unbinned
+
 
 
 def produce_trex_event_object(event_object, data_path, monitor_name, to_s=1e-6):
@@ -27,19 +51,22 @@ def produce_trex_event_object(event_object, data_path, monitor_name, to_s=1e-6):
         monitor_position = loaded_data.get_global_component_coordinates(monitor_name)
 
     data = ms.load_data(data_path)
+    monitor = ms.name_search(monitor_name, data)
 
-    monitor = ms.name_search("Monitor6", data)
     event_object.coords["monitor_position"] = sc.vector(
         value=monitor_position, unit="m"
     )
-    event_object.coords["time_on_monitor"] = sc.scalar(
-        value=_calc_pulse_tof_centroid(monitor, to_s=to_s), unit="s"
-    )  # , unit=sc.Unit('us'))
+
+    centroids = _calc_pulse_tof_centroid(monitor)
+    assigned_time_on_monitor = _assign_time_on_monitor(event_object, centroids)
+    
+    event_object.coords['time_on_monitor'] = assigned_time_on_monitor.coords['time_on_monitor']
+
+
     return event_object
 
 
 # Graph Functions
-
 
 def straight_monitor_beam(
     source_position: VariableLike, monitor_position: VariableLike
@@ -128,7 +155,7 @@ def Q_from_k(ki, kf):
 
 def mag_Q(Q):
     """ """
-    return sc.norm(Q)
+    return sc.to_unit(sc.norm(Q), "1/angstrom")
 
 
 def energy_transfer_from_k(mag_kf, mag_ki):
@@ -136,7 +163,7 @@ def energy_transfer_from_k(mag_kf, mag_ki):
     dE = (sc.constants.hbar**2 / (2 * sc.constants.neutron_mass)) * (
         mag_ki**2 - mag_kf**2
     )
-    return dE
+    return sc.to_unit(dE, sc.units.meV)
 
 
 inelastic = {}
