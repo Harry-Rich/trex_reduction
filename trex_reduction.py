@@ -101,7 +101,7 @@ def vi_from_monitor(Lm, time_on_monitor):
 def mag_ki_from_vi(vi):
     """ """
     mag_ki = (sc.constants.neutron_mass * vi) / sc.constants.hbar
-    return mag_ki
+    return sc.to_unit(mag_ki, "1/angstrom")
 
 
 def ki(mag_ki, unit_ki):
@@ -137,7 +137,7 @@ def vf_from_tof(L2, tof, time_on_sample):
 def mag_kf_from_vf(vf):
     """ """
     mag_kf = (sc.constants.neutron_mass * vf) / sc.constants.hbar
-    return mag_kf
+    return sc.to_unit(mag_kf, "1/angstrom")
 
 
 def kf(mag_kf, unit_kf):
