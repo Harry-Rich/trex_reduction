@@ -8,6 +8,26 @@ from scipy.ndimage import label
 
 # Utility Functions
 
+def v_bin_norm(binner, event_object, vanad_object, mag_Q_dim = 'mag_Q'):
+
+    if type(binner) != list:
+        binner = [binner]
+
+    hist_kwargs = {bin_dim.dims[0]: bin_dim for bin_dim in binner}
+    hist_event = event_object.bin(**hist_kwargs).hist(**hist_kwargs)
+    hist_vanad = vanad_object.bin(**hist_kwargs).hist(**hist_kwargs)
+
+    if mag_Q_dim in hist_kwargs:
+        Q_dict = {mag_Q_dim:hist_kwargs[mag_Q_dim]}
+        vanad_q_mag = vanad_object.bin(**Q_dict).hist(**Q_dict)
+        hist_norm = hist_event / vanad_q_mag
+    else:
+        print(f'dimension: {mag_Q_dim} not found, not normalising over q')
+        vanad_q_mag = 1
+        hist_norm  = np.nan
+
+    return hist_event, hist_vanad, hist_norm
+
 
 def _calc_pulse_tof_centroid(tof_monitor,threshold=0, to_s=1e-6):
     # Assumes all pulses are evenly spaced in xaxis - but isn't bin data??? confirm this
