@@ -41,30 +41,16 @@ def _calc_pulse_tof_centroid(tof_monitor,threshold=0, to_s=1e-6):
     return coms
 
 
-def _assign_time_on_monitor(event_object, pulse_centroids):
-    """ """
-    # Binning for assigning time on monitor
-    # Ideally also need to calculate time between monitor and sample to calc inf energy cut offs for each pulse - but this is a start
+def _assign_time_on_monitor(event_object, pulse_centroids, gap = 0):
+    original_tof = event_object.coords['tof'].values
+    bin_indices = np.searchsorted(pulse_centroids - gap, original_tof, side='right') - 1
+    bin_indices = np.clip(bin_indices, 0, len(pulse_centroids) - 1)
+    tom_mapped = (pulse_centroids - gap)[bin_indices]
 
-    edges = np.concatenate([[0], pulse_centroids[1:], [1e25]]) # scipp gets upset with np.inf? 
-    time_on_monitor_edges = sc.array(dims=['tof'], values=edges, unit='s')
-    binned = event_object.bin(tof=time_on_monitor_edges)
-
-
-    binned.coords['time_on_monitor'] = sc.array(
-        dims=['tof'], values=pulse_centroids, unit='s'
-    )
-
-    binned.bins.coords['time_on_monitor'] = sc.bins_like(
-        binned, binned.coords['time_on_monitor']
-    )
-
-    unbinned = binned.bins.constituents['data']
-    return unbinned
+    return tom_mapped
 
 
-
-def produce_trex_event_object(event_object, data_path, monitor_name, to_s=1e-6):
+def produce_trex_event_object(event_object, data_path, monitor_name, to_s=1e-6, gap = 0):
     """ """
 
     with mx.Read(data_path) as loaded_data:
@@ -78,13 +64,12 @@ def produce_trex_event_object(event_object, data_path, monitor_name, to_s=1e-6):
     )
 
     centroids = _calc_pulse_tof_centroid(monitor)
-    assigned_time_on_monitor = _assign_time_on_monitor(event_object, centroids)
+    assigned_time_on_monitor = _assign_time_on_monitor(event_object, centroids, gap=gap)
     
-    event_object.coords['time_on_monitor'] = assigned_time_on_monitor.coords['time_on_monitor']
+    event_object.coords['time_on_monitor'] = sc.array(dims=event_object.dims, values=assigned_time_on_monitor, unit='s')
 
 
     return event_object
-
 
 # Graph Functions
 
