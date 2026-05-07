@@ -1,0 +1,2407 @@
+/********************************************************************************
+* 
+* McStas, neutron ray-tracing package
+*         Copyright (C) 1997-2008, All rights reserved
+*         Risoe National Laboratory, Roskilde, Denmark
+*         Institut Laue Langevin, Grenoble, France
+* 
+* This file was written by McStasScript, which is a 
+* python based McStas instrument generator written by 
+* Mads Bertelsen in 2019 while employed at the 
+* European Spallation Source Data Management and 
+* Software Centre
+* 
+* Instrument: TREX_vanad
+* 
+* %Identification
+* Written by: McCode Py-Generator
+* Date: 13:37:40 on May 04, 2026
+* Origin: ESS DMSC
+* %INSTRUMENT_SITE: Generated_instruments
+* 
+* !!Please write a short instrument description (1 line) here!!
+* 
+* %Description
+* Please write a longer instrument description here!
+* 
+* 
+* %Parameters
+* L0: [unit] Parameter type (double) added by McCode py-generator
+* d_Li: [unit] Parameter type (double) added by McCode py-generator
+* RRM: [unit] Parameter type (int) added by McCode py-generator
+* mod_type: [unit] Parameter type (int) added by McCode py-generator
+* bender: [unit] Parameter type (int) added by McCode py-generator
+* sample_rot: [unit] Parameter type (double) added by McCode py-generator
+* phase_M: [unit] Parameter type (double) added by McCode py-generator
+* phase_P: [unit] Parameter type (double) added by McCode py-generator
+* block_pulses: [unit] Parameter type (string) added by McCode py-generator
+* b_rot: [unit] Parameter type (double) added by McCode py-generator
+* coll: [unit] Parameter type (double) added by McCode py-generator
+* 
+* %Link 
+* 
+* %End 
+********************************************************************************/
+
+DEFINE INSTRUMENT TREX_vanad (
+double L0 = 2.4, // Parameter type (double) added by McCode py-generator
+double d_Li = 0.845, // Parameter type (double) added by McCode py-generator
+int RRM = 18, // Parameter type (int) added by McCode py-generator
+int mod_type = 1, // Parameter type (int) added by McCode py-generator
+int bender = 0, // Parameter type (int) added by McCode py-generator
+double sample_rot = 0, // Parameter type (double) added by McCode py-generator
+double phase_M = 0, // Parameter type (double) added by McCode py-generator
+double phase_P = 0, // Parameter type (double) added by McCode py-generator
+string block_pulses = "NULL", // Parameter type (string) added by McCode py-generator
+double b_rot = -0.5, // Parameter type (double) added by McCode py-generator
+double coll = 0 // Parameter type (double) added by McCode py-generator
+)
+DEPENDENCY "  -DUSE_OFF "
+
+DECLARE 
+%{
+
+double frac; // used in the Source component, Defines the statistical fraction of events emitted from the cold part of the moderator, the value is determined later in the file depending in the moderator type that was chosen
+
+double lamb_1, lamb_2, Li;
+
+double RRM_uneven;
+double half_RRM;
+
+double tof_BW1, tof_BW2, tof_M1, tof_M2, tof_P1, tof_P2;
+
+double tof_M1_min, tof_M2_max, tof_P1_min, tof_P2_max; //  used to calculate monitor options for monitors after the choppers
+
+double T_offset = 1700.0*1e-6;
+double f = 14.0;
+//double ang_c_t;
+
+// characteristic wavelength
+double bw, stepwl;
+double lf_max; 
+double vi, v1, v2, v0, e1, e2; 
+
+
+// distances
+double L_SG = 2.;
+
+double L_BW1 = 32;
+double L_BW2 = 40;
+
+double L_P1 = 107.95;
+double L_P2 = 108.05;
+
+double L_M1 = 161.995;
+double L_M2 = 162.005;
+
+double L_S = 163.8;           // length to sample
+double L_D = 166.8;	      // length to detector
+double L_SD = 3;              // length from sample to monitor --> Must be (L_D - L_S)
+
+// Chopper parameters
+
+    // BW1 Chopper
+    double f_BW1;
+    double radius_BW1;
+    char theta_pos_BW1[256] = "0";
+    char theta_width_BW1[256] = "61.4";
+    double delta_y_BW1;
+    double delay_BW1; //time delay
+    double nslits_BW1;
+    
+    // BW2 Chopper
+    double f_BW2;
+    double radius_BW2;
+    char theta_pos_BW2[256] = "0";
+    char theta_width_BW2[256] = "63.3";
+    double delta_y_BW2;
+    double delay_BW2; //time delay
+    double nslits_BW2;
+    
+    // P1 Chopper
+    double f_P1;
+    double radius_P1;
+    char theta_pos_P1[256] = "0 -55 -180 -235";
+    char theta_width_P1[256] = "20 35 20 35";
+    double delta_y_P1;
+    double delay_P1; //time delay
+    double nslits_P1;
+    double phase_P1;// angular delay
+    
+    // P2 Chopper
+    double f_P2;
+    double radius_P2;
+    char theta_pos_P2[256] = "0 -55 -180 -235";
+    char theta_width_P2[256] = "20 35 20 35";
+    double delta_y_P2;
+    double delay_P2; //time delay
+    double nslits_P2;
+    double phase_P2;// angular delay
+    
+    // FAN Chopper
+    double f_FAN;
+    double radius_FAN;
+    char theta_pos_FAN[256] = "180";
+    char theta_width_FAN[256] = "348";
+    double delta_y_FAN;
+    double nslits_FAN;
+
+	double f_FAN1, f_FAN2, f_FAN3, f_FAN4, f_FAN5, f_FAN6, f_FAN7, f_FAN8, f_FAN9, f_FAN10;
+	double delay_FAN1, delay_FAN2, delay_FAN3, delay_FAN4, delay_FAN5, delay_FAN6, delay_FAN7, delay_FAN8, delay_FAN9, delay_FAN10;
+	double phase_FAN1, phase_FAN2, phase_FAN3, phase_FAN4, phase_FAN5, phase_FAN6, phase_FAN7, phase_FAN8, phase_FAN9, phase_FAN10;
+
+    
+    // M1 Chopper
+    double f_M1;
+    double radius_M1;
+    char theta_pos_M1[256] = "0 175";
+    char theta_width_M1[256] = "2.5 4.4";
+    double delta_y_M1;
+    double delay_M1; //time delay
+    double nslits_M1;
+    double phase_M1;// angular delay
+    
+    // M2 Chopper
+    double f_M2;
+    double radius_M2;
+    char theta_pos_M2[256] = "0 175";
+    char theta_width_M2[256] = "2.5 4.4";
+    double delta_y_M2;
+    double delay_M2; //time delay
+    double nslits_M2;
+    double phase_M2;// angular delay
+
+
+// tof for focusing at detector
+double tof_D_1;
+double tof_D_2;
+// detector options
+char   banana_options[1024], spherical_options[1024], square_options[1024], energy_options[1024];
+
+// monitor definitions
+int lbin;
+int ebin;
+char setSMl[256], setSMt[256],setSMt_M[256],setSMt_P[256], setSMlhdiv[256], setSMlvdiv[256], setBW1[256], setBW2[256], setPL[256], setP[256], setFAN[256], setML[256], setM[256], setSL[256], setS[256];
+    
+%}
+
+INITIALIZE 
+%{
+// Start of initialize for generated TREX_vanad
+
+
+// Source type
+switch (mod_type)
+	{
+	case 0: {frac = 0.0; break;} // Thermal moderator
+	case 1: {frac = 0.5; break;} // Bispectral moderator
+	case 2: {frac = 1.0; break;} // Cold moderator
+	}
+	
+// frequencies
+	f_BW1 = f;
+	f_BW2 = f_BW1;
+	f_P1 = RRM*f*0.75;
+	f_P2 = -f_P1;
+	f_FAN = f;
+	f_M1 = RRM*f;
+	f_M2 = -f_M1;
+
+
+// characteristic wavelength 
+	stepwl = K2V*2*PI/(L_M1+L_M2)*2.0/fabs(f_M1);
+	printf("Wavelength Step: %g \n", stepwl);
+	lf_max = K2V*2*PI*(1+(L_M2-L_S)/L_M2)/L_SD/f_M2;
+	v0 = 2*PI*K2V/L0;       // speed center neutron
+
+// Source parameters
+	vi = 2*PI*K2V/Li;
+	//Ei = VS2E*vi*vi;
+	lamb_1 = L0-d_Li*1.1;
+	printf("lamb_1: %g \n", lamb_1);
+	lamb_2 = L0+d_Li*1.1;
+	printf("lamb_2: %g \n", lamb_2);
+	v1 = 2*PI*K2V/lamb_1;   // slowest neutron
+	v2 = 2*PI*K2V/lamb_2;   // fastest neutron
+
+// time of flight and chopper phases
+	tof_BW1 = T_offset + L_BW1/v0;
+	tof_BW2 = T_offset + L_BW2/v0;
+	
+	tof_M1 = T_offset + L_M1/v0;
+	tof_M2 = T_offset + L_M2/v0;
+
+	tof_P1 = T_offset + L_P1/v0;
+	tof_P2 = T_offset + L_P2/v0;
+
+// read in which pulses to block
+	int max_pulses = 10;
+	int blocked_pulses[max_pulses];	// Initialize all elements to 0
+	for (int i = 0; i < max_pulses; i++) {
+        blocked_pulses[i] = 0; 
+    }
+    int npulses = 0;
+
+    // Tokenize the input string
+    char *token = strtok(block_pulses, "-");
+    while (token != NULL && npulses < max_pulses) {
+        blocked_pulses[npulses++] = atoi(token);
+        token = strtok(NULL, "-");
+    }
+
+    // Output the array
+    printf("Array:\n");
+    for (int i = 0; i < max_pulses; i++) {
+        printf("%d\n", blocked_pulses[i]);
+    }
+
+
+
+ // Printing the blocked_pulses array
+    printf("Pulses to block:\n");
+    for (int i = 0; i < npulses; i++) {
+        printf("%d\n", blocked_pulses[i]); // Print as integers
+    }
+
+
+// calculate the tof for each FAN Chopper
+	half_RRM = RRM / 2;
+	RRM_uneven = half_RRM * 2 + 1;
+
+double Ls_FAN[npulses];
+double lambs_FAN[npulses];
+double tofs_FAN[max_pulses];
+for (int i = 0; i < max_pulses; i++) {
+        tofs_FAN[i] = 0; 
+    }
+
+for (int i = 0; i < npulses; i++) {
+    Ls_FAN[i] =  151.51801 + i * 0.070/9;
+    lambs_FAN[i] =  L0 - (half_RRM - blocked_pulses[i] + 1) * stepwl;
+    tofs_FAN[i] =  T_offset + Ls_FAN[i]/( 2*PI*K2V/lambs_FAN[i]);
+    printf("Abstand FAN: %f\n", Ls_FAN[i]);
+}
+
+printf("\ntof to M1: %g, M2: %g, P1: %g, P2: %g \n", tof_M1, tof_M2, tof_P1, tof_P2);  
+
+
+// Chopper parameters
+
+    // BW1 Chopper
+    radius_BW1 = 0.35;
+    delta_y_BW1 = -0.3075;
+    delay_BW1 = tof_BW1; //time delay
+    nslits_BW1 = 1;
+    
+    // BW2 Chopper
+    radius_BW2 = 0.35;
+    delta_y_BW2 = delta_y_BW1;
+    delay_BW2 = tof_BW2; //time delay
+    nslits_BW2 = 1;
+    
+    // P1 Chopper
+    radius_P1 = 0.35;
+    delta_y_P1 = 0.305;
+    delay_P1 = tof_P1; //time delay
+    nslits_P1 = 4;
+    phase_P1 = phase_P;// angular delay
+    
+    // P2 Chopper
+    radius_P2 = 0.35;
+    delta_y_P2 = delta_y_P1;
+    delay_P2 = tof_P2; //time delay
+    nslits_P2 = 4;
+    phase_P2 = phase_P;// angular delay
+    
+    // FAN Chopper
+    radius_FAN = 0.35;
+    delta_y_FAN = 0.3125;
+    nslits_FAN = 1;
+
+// only #npulses of FAN choppers need to spin set all other frequencies to 0
+// FAN chopperblades block the beam by default if they are not rotating --> need to add phase to all fan choppers that dont spin
+    int freq_FAN[max_pulses];
+    int phases_FAN[max_pulses];
+
+    // Initialize the array with some sample values
+    for (int i = 0; i < max_pulses; i++) {
+        freq_FAN[i] = 0; 
+	phases_FAN[i] = 180;
+    }
+
+    // Set values based on the threshold
+    for (int i = 0; i < max_pulses; i++) {
+        if (i < npulses) {
+            freq_FAN[i] = 14;
+	    phases_FAN[i] = 0;
+        } 
+    }
+
+    // Print the updated values
+    printf("Updated freq_FAN and phases values:\n");
+    for (int i = 0; i < max_pulses; i++) {
+        printf("freq_FAN%d = %d\n", i + 1, freq_FAN[i]);
+	printf("phase%d = %d\n", i + 1, phases_FAN[i]);
+    }
+
+	delay_FAN1 = tofs_FAN[0];
+	delay_FAN2 = tofs_FAN[1];
+	delay_FAN3 = tofs_FAN[2];
+	delay_FAN4 = tofs_FAN[3];
+	delay_FAN5 = tofs_FAN[4];
+	delay_FAN6 = tofs_FAN[5];
+	delay_FAN7 = tofs_FAN[6];
+	delay_FAN8 = tofs_FAN[7];
+	delay_FAN9 = tofs_FAN[8];
+	delay_FAN10 =tofs_FAN[9];
+	            
+    printf("delays:\n");
+    for (int i = 0; i < max_pulses; i++) {
+        printf("%f\n", tofs_FAN[i]); // Print as integers
+    }
+          
+        phase_FAN1  = phases_FAN[0];
+	phase_FAN2  = phases_FAN[1];
+	phase_FAN3  = phases_FAN[2];
+	phase_FAN4  = phases_FAN[3];
+	phase_FAN5  = phases_FAN[4];
+	phase_FAN6  = phases_FAN[5];
+	phase_FAN7  = phases_FAN[6];
+	phase_FAN8  = phases_FAN[7];
+	phase_FAN9  = phases_FAN[8];
+	phase_FAN10 = phases_FAN[9];
+	
+    //printf("phases:\n %f", phase_FAN);
+
+	f_FAN1  = freq_FAN[0];
+	f_FAN2  = freq_FAN[1];
+	f_FAN3  = freq_FAN[2];
+	f_FAN4  = freq_FAN[3];
+	f_FAN5  = freq_FAN[4];
+	f_FAN6  = freq_FAN[5];
+	f_FAN7  = freq_FAN[6];
+	f_FAN8  = freq_FAN[7];
+	f_FAN9  = freq_FAN[8];
+	f_FAN10  = freq_FAN[9];
+
+    printf("frequencies:\n");
+    for (int i = 0; i < max_pulses; i++) {
+        printf("%d\n", freq_FAN[i]); // Print as integers
+    }
+
+
+printf("phases:\n %f", delay_FAN5);
+printf("phases:\n %f", f_FAN5);
+
+    // M1 Chopper
+    radius_M1 = 0.35;
+    delta_y_M1 = 0.325;
+    delay_M1 = tof_M1; //time delay
+    nslits_M1 = 2;
+    phase_M1 = phase_M;// angular delay
+
+    // M2 Chopper
+    radius_M2 = 0.35;
+    delta_y_M2 = -delta_y_M1;
+    delay_M2 = tof_M1; //time delay
+    nslits_M2 = 2;
+    phase_M2 = phase_M;// angular delay
+
+     
+// Detector parameters
+tof_D_1 = T_offset + L_D/(K2V*2*PI/lamb_1);
+tof_D_2 = T_offset + tof_D_1 + 0.072 + 0.00289;
+lbin = round((lamb_2-lamb_1)/0.002);    
+
+//sprintf(spherical_options, "sphere, theta limits = [10 135] bins=288, phi limits = [-25 15] bins=66, time limits=[%g %g]bins=[%li]", T_offset + L_D/v1, T_offset + L_D/v2, lbin*50);
+//sprintf(banana_options, "banana, theta limits = [10 144] bins=288, phi limits = [-25 15] bins=66, time limits=[%g %g]bins=250", T_offset + L_D/v1, T_offset + L_D/v2);
+//sprintf(banana_options, "xwidth = 0.1, yheight = 0.1, time limits=[%g %g]bins=[%li]", T_offset + L_D/v1, T_offset + L_D/v2, lbin*50); // 2*T_offset+L_D/v1, L_D/v2, lbin*10); // Removed T_offset +
+sprintf(square_options, "time limits=[%g %g]bins=[%li]", T_offset + L_D/v1, T_offset + L_D/v2, lbin*10);
+// Monitors
+lbin = round((lamb_2-lamb_1)/0.002);    // number of bins for TOF monitors
+printf("\n\n \t nbin: %i \n\n", lbin);
+sprintf(setBW1, "time limits [%g %g] bins = [%i]", T_offset + L_BW1/v1, T_offset + L_BW1/v2, lbin*5);
+sprintf(setBW2, "time limits [%g %g] bins = [%i]", T_offset + L_BW2/v1, T_offset + L_BW2/v2, lbin*5); //Changed T_offset + to what's written here
+sprintf(setP, "time limits [%g %g] bins = [%i]",   T_offset + L_P2/v1,  T_offset + L_P2/v2,  lbin*5);
+sprintf(setPL, "lambda limits=[%g %g], bins=%i", lamb_1, lamb_2, lbin*5);
+
+sprintf(setFAN, "time limits [%g %g] bins = [%i]", T_offset + Ls_FAN[0]/v1, T_offset + Ls_FAN[0]/v2, lbin*10);
+
+sprintf(setM, "time limits [%g %g] bins = [%i]",   T_offset + L_M2/v1,  T_offset + L_M2/v2,  lbin*10);
+sprintf(setML, "lambda limits=[%g %g], bins=%i", lamb_1, lamb_2, lbin*5);
+sprintf(setS, "time limits [%g %g] bins = [%i]",   T_offset + L_S/v1,   T_offset + L_S/v2,   lbin*10); //Added a 2* to T_offset +
+sprintf(setSL, "lambda limits=[%g %g], bins=%i", lamb_1, lamb_2, lbin*5);
+//tof_M1_min = T_offset+L_M1/vi-M_theta/360.0/f_M1;
+//tof_M2_max = T_offset+L_M2/vi-M_theta/360.0/f_M2;
+
+tof_M1_min = T_offset+L_M1/v1;
+tof_M2_max = T_offset+L_M2/v2;
+
+tof_P1_min = T_offset+L_P1/v1;
+tof_P2_max = T_offset+L_P2/v2;
+sprintf(setSMt_M, "time limits=[%g %g], bins=%i", tof_M1_min, tof_M2_max, 50);
+sprintf(setSMt_P, "time limits=[%g %g], bins=%i", tof_P1_min, tof_P2_max, 100);
+sprintf(setSMlhdiv, "hdiv limits [-2.5:2.5] bins = 200, lambda limits=[%g %g], bins=%i", lamb_1, lamb_2, lbin);
+sprintf(setSMlvdiv, "vdiv limits [-2.5:2.5] bins = 200, lambda limits=[%g %g], bins=%i", lamb_1, lamb_2, lbin);
+
+
+
+    
+%}
+
+TRACE 
+COMPONENT origin = Progress_bar(
+ profile = "NULL", percent = 10,
+ flag_save = 0, minutes = 0)
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT ESS_source = ESS_butterfly(
+ sector = "W", beamline = 7,
+ yheight = 0.03, cold_frac = frac,
+ target_index = 0, dist = 2,
+ focus_xw = 0.095, focus_yh = 0.035,
+ c_performance = 1, t_performance = 1,
+ Lmin = lamb_1, Lmax = lamb_2,
+ tmax_multiplier = 3, n_pulses = 1,
+ acc_power = 2, tfocus_dist = 0,
+ tfocus_time = 0, tfocus_width = 0)
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT source_monitor_xy = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.1,
+ yheight = 0.04, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "x limits [-0.05:0.05] bins = 100, y limits [-0.02:0.02] bins = 100",
+ filename = "source_monitor_xy.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (-0.002, 0, 1.8953) ABSOLUTE
+
+COMPONENT source_monitor_div = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.09,
+ yheight = 0.03, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "hdiv limits [-2.5:2.5] bins = 100, vdiv limits [-2.5:2.5] bins = 100",
+ filename = "source_monitor_div.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (-0.002, 0, 1.8954) ABSOLUTE
+
+COMPONENT guide_0 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try0.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_1 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try1.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_3 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try3.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_4 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try4.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_5 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try5.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_7 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try7.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_8 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try8.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_10 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try10.off")
+WHEN (( bender == 0 ))
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT bender = Pol_bender(
+ xwidth = 0.06384, yheight = 0.046,
+ length = 0.05, radius = 7.2,
+ G = 9.8, nslit = 425,
+ d = 1e-6, debug = 0,
+ endFlat = 0, rTopUpPar = { 0.99 , 0.0219 , 3.02 , 4.0 , 0.003 },
+ rTopDownPar = { 0.99 , 0.0219 , 3.02 , 4.0 , 0.003 }, rBotUpPar = { 0.99 , 0.0219 , 6.07 , 2.0 , 0.003 },
+ rBotDownPar = { 0.99 , 0.0219 , 6.07 , 2.0 , 0.003 }, rLeftUpPar = { 0.99 , 0.0219 , 6.07 , 2.0 , 0.003 },
+ rLeftDownPar = { 0.99 , 0.0219 , 6.07 , 2.0 , 0.003 }, rRightUpPar = { 0.99 , 0.0219 , 6.07 , 2.0 , 0.003 },
+ rRightDownPar = { 0.99 , 0.0219 , 6.07 , 2.0 , 0.003 }, rTopUpData = "",
+ rTopDownData = "", rBotUpData = "",
+ rBotDownData = "", rLeftUpData = "",
+ rLeftDownData = "", rRightUpData = "",
+ rRightDownData = "", drawOption = 2)
+WHEN (( bender == 1 ))
+AT (-0.017, 0, 5.399) ABSOLUTE
+ROTATED (0 + 0.00192, b_rot, 0) ABSOLUTE
+
+COMPONENT guide_11 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try11.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT slit = Slit(
+ xmin = UNSET, xmax = UNSET,
+ ymin = UNSET, ymax = UNSET,
+ radius = UNSET, xwidth = 0.06,
+ yheight = 0.046)
+AT (-0.017, 0, 5.915) ABSOLUTE
+
+COMPONENT insert_monitor_xy = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.06,
+ yheight = 0.046, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "x limits [-0.03:0.03] bins = 100, y limits [-0.023:0.023] bins = 100",
+ filename = "insert_monitor_xy.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (-0.017, 0.0, 5.9151) ABSOLUTE
+ROTATED (0, 0, 0) ABSOLUTE
+
+COMPONENT insert_monitor_div = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.06,
+ yheight = 0.046, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "hdiv limits [-1.0:1.0] bins = 201, vdiv limits [-1.0:1.0] bins = 201",
+ filename = "insert_monitor_div.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (-0.017, 0, 5.9152) ABSOLUTE
+
+COMPONENT guide_13 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try13.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_14 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try14.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_15 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try15.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_16 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try16.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_18 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try18.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_19 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try19.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_20 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try20.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_22 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try22.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_23 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try23.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_24 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try24.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_25 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try25.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_27 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try27.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_28 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try28.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_29 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try29.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_30 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try30.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_32 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try32.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_33 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try33.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_34 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try34.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_36 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try36.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_37 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try37.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_39 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try39.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_40 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try40.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_41 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try41.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_42 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try42.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_44 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try44.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_45 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try45.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_46 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try46.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_47 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try47.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT BW_Chopper_1 = MultiDiskChopper(
+ slit_center = theta_pos_BW1, slit_width = theta_width_BW1,
+ nslits = nslits_BW1, delta_y = delta_y_BW1,
+ nu = f_BW1, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_BW1, isfirst = 0,
+ phase = 0, radius = radius_BW1,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.011348994153930106, 0.0, 32.0) ABSOLUTE
+ROTATED (0, 0.124542024141650, 0) ABSOLUTE
+
+COMPONENT B1_monitor_xy = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.070,
+ yheight = 0.09, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "x limits [-0.035:0.035] bins = 100, y limits [-0.045:0.045] bins = 100",
+ filename = "BW1_monitor_xy.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0.011348994153930106, 0, 32.1) ABSOLUTE
+ROTATED (0, 0.124542024141650, 0) ABSOLUTE
+
+COMPONENT guide_49 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try49.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_50 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try50.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_51 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try51.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_52 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try52.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_53 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try53.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_54 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try54.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_55 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try55.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT BW_Chopper_2 = MultiDiskChopper(
+ slit_center = theta_pos_BW2, slit_width = theta_width_BW2,
+ nslits = nslits_BW2, delta_y = delta_y_BW2,
+ nu = f_BW2, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_BW2, isfirst = 0,
+ phase = 0, radius = radius_BW2,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.03140505829452013, 0.0, 40.0) ABSOLUTE
+ROTATED (0, 0.162739331227240, 0) ABSOLUTE
+
+COMPONENT B2_monitor_xy = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.060,
+ yheight = 0.085, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "x limits [-0.0375:0.0375] bins = 100, y limits [-0.05:0.05] bins = 100",
+ filename = "BW2_monitor_xy.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE BW_Chopper_2
+ROTATED (0.0, 0.0, 0.0) RELATIVE BW_Chopper_2
+
+COMPONENT guide_57 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try57.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_58 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try58.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_59 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try59.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_60 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try60.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_61 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try61.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_62 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try62.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_63 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try63.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_64 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try64.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_65 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try65.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_66 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try66.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_67 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try67.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_68 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try68.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_69 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try69.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_70 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try70.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_71 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try71.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_72 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try72.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_73 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try73.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_74 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try74.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_75 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try75.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_76 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try76.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_77 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try77.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_78 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try78.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_79 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try79.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_80 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try80.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_81 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try81.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_82 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try82.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_83 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try83.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_84 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try84.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_85 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try85.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_86 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try86.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_87 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try87.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_88 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try88.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_89 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try89.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_90 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try90.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_91 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try91.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_92 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try92.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_93 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try93.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_94 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try94.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_95 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try95.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_96 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try96.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_97 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try97.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_98 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try98.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_99 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try99.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_100 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try100.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_101 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try101.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT PulseShapingChopper1 = MultiDiskChopper(
+ slit_center = theta_pos_P1, slit_width = theta_width_P1,
+ nslits = nslits_P1, delta_y = delta_y_P1,
+ nu = f_P1, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_P1, isfirst = 0,
+ phase = 0, radius = radius_P1,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.4108460115539497, 0.0, 107.95) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT PulseShapingChopper2 = MultiDiskChopper(
+ slit_center = theta_pos_P2, slit_width = theta_width_P2,
+ nslits = nslits_P2, delta_y = delta_y_P2,
+ nu = f_P2, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_P2, isfirst = 0,
+ phase = 0, radius = radius_P2,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.41159673083080733, 0.0, 108.05) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT P_monitor_ToF = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.06,
+ yheight = 0.084, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = setP,
+ filename = "P_monitor_tof.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE PulseShapingChopper2
+ROTATED (0.0, 0.0, 0.0) RELATIVE PulseShapingChopper2
+
+COMPONENT P_monitor_lam = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.060,
+ yheight = 0.085, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = setPL,
+ filename = "P_monitor_lam.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE P_monitor_ToF
+ROTATED (0.0, 0.0, 0.0) RELATIVE P_monitor_ToF
+
+COMPONENT P_monitor_xy = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.060,
+ yheight = 0.085, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "x limits [-0.035:0.035] bins = 100, y limits [-0.045:0.045] bins = 100",
+ filename = "P_monitor_xy.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 0.05) RELATIVE P_monitor_lam
+ROTATED (0.0, 0.0, 0.0) RELATIVE P_monitor_lam
+
+COMPONENT guide_103 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try103.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_104 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try104.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_105 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try105.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_106 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try106.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_107 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try107.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_108 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try108.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_109 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try109.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_110 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try110.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_111 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try111.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_112 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try112.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_113 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try113.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_114 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try114.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_115 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try115.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_116 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try116.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_117 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try117.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_118 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try118.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_119 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try119.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_120 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try120.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_121 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try121.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_122 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try122.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_123 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try123.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_124 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try124.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT FanChopper_1 = MultiDiskChopper(
+ slit_center = theta_pos_FAN, slit_width = theta_width_FAN,
+ nslits = nslits_FAN, delta_y = delta_y_FAN,
+ nu = f_FAN1, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_FAN1, isfirst = 0,
+ phase = phase_FAN1, radius = radius_FAN,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.7379194611672716, 0.0, 151.51801) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT FanChopper_2 = MultiDiskChopper(
+ slit_center = theta_pos_FAN, slit_width = theta_width_FAN,
+ nslits = nslits_FAN, delta_y = delta_y_FAN,
+ nu = f_FAN2, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_FAN2, isfirst = 0,
+ phase = phase_FAN2, radius = radius_FAN,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.7379778170790591, 0.0, 151.52578333333332) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT FanChopper_3 = MultiDiskChopper(
+ slit_center = theta_pos_FAN, slit_width = theta_width_FAN,
+ nslits = nslits_FAN, delta_y = delta_y_FAN,
+ nu = f_FAN3, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_FAN3, isfirst = 0,
+ phase = phase_FAN3, radius = radius_FAN,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.738036172990847, 0.0, 151.53355666666667) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT FanChopper_4 = MultiDiskChopper(
+ slit_center = theta_pos_FAN, slit_width = theta_width_FAN,
+ nslits = nslits_FAN, delta_y = delta_y_FAN,
+ nu = f_FAN4, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_FAN4, isfirst = 0,
+ phase = phase_FAN4, radius = radius_FAN,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.7380945289026345, 0.0, 151.54133) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT FanChopper_5 = MultiDiskChopper(
+ slit_center = theta_pos_FAN, slit_width = theta_width_FAN,
+ nslits = nslits_FAN, delta_y = delta_y_FAN,
+ nu = f_FAN5, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_FAN5, isfirst = 0,
+ phase = phase_FAN5, radius = radius_FAN,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.7381528848144224, 0.0, 151.54910333333333) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT FanChopper_6 = MultiDiskChopper(
+ slit_center = theta_pos_FAN, slit_width = theta_width_FAN,
+ nslits = nslits_FAN, delta_y = delta_y_FAN,
+ nu = f_FAN6, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_FAN6, isfirst = 0,
+ phase = phase_FAN6, radius = radius_FAN,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.7382112407262101, 0.0, 151.55687666666665) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT FanChopper_7 = MultiDiskChopper(
+ slit_center = theta_pos_FAN, slit_width = theta_width_FAN,
+ nslits = nslits_FAN, delta_y = delta_y_FAN,
+ nu = f_FAN7, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_FAN7, isfirst = 0,
+ phase = phase_FAN7, radius = radius_FAN,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.7382695966379978, 0.0, 151.56465) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT FanChopper_8 = MultiDiskChopper(
+ slit_center = theta_pos_FAN, slit_width = theta_width_FAN,
+ nslits = nslits_FAN, delta_y = delta_y_FAN,
+ nu = f_FAN8, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_FAN8, isfirst = 0,
+ phase = phase_FAN8, radius = radius_FAN,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.7383279525497856, 0.0, 151.57242333333332) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT FanChopper_9 = MultiDiskChopper(
+ slit_center = theta_pos_FAN, slit_width = theta_width_FAN,
+ nslits = nslits_FAN, delta_y = delta_y_FAN,
+ nu = f_FAN9, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_FAN9, isfirst = 0,
+ phase = phase_FAN9, radius = radius_FAN,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.7383863084615735, 0.0, 151.58019666666667) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT FanChopper_10 = MultiDiskChopper(
+ slit_center = theta_pos_FAN, slit_width = theta_width_FAN,
+ nslits = nslits_FAN, delta_y = delta_y_FAN,
+ nu = f_FAN10, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_FAN10, isfirst = 0,
+ phase = phase_FAN10, radius = radius_FAN,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.738444664373361, 0.0, 151.58796999999998) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT F_monitor_flux = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.040,
+ yheight = 0.050, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "flux bins=1",
+ filename = "F_flux.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0.7384448145172166, 0.0, 151.58799) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT F_monitor_hdiv = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.040,
+ yheight = 0.050, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "hdiv limits [-2.0:2.0] bins = 100",
+ filename = "F_monitor_hdiv.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE F_monitor_flux
+ROTATED (0.0, 0.0, 0.0) RELATIVE F_monitor_flux
+
+COMPONENT F_monitor_vdiv = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.040,
+ yheight = 0.050, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "vdiv limits [-2.0:2.0] bins = 100",
+ filename = "F_monitor_vdiv.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE F_monitor_hdiv
+ROTATED (0.0, 0.0, 0.0) RELATIVE F_monitor_hdiv
+
+COMPONENT F_monitor_lam = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.040,
+ yheight = 0.050, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "lambda limits [0.5:5] bins = 1301",
+ filename = "F_monitor_lam.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE F_monitor_vdiv
+ROTATED (0.0, 0.0, 0.0) RELATIVE F_monitor_vdiv
+
+COMPONENT F_monitor_ToF = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.04,
+ yheight = 0.05, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = setFAN,
+ filename = "F_monitor_tof.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE F_monitor_lam
+ROTATED (0.0, 0.0, 0.0) RELATIVE F_monitor_lam
+
+COMPONENT F_monitor_xy = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.050,
+ yheight = 0.065, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "x limits [-0.025:0.025] bins = 100, y limits [-0.0325:0.0325] bins = 100",
+ filename = "F_monitor_xy.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0.7384448145172166, 0.0, 151.58799) ABSOLUTE
+ROTATED (0, 0.430122381481145, 0) ABSOLUTE
+
+COMPONENT guide_126 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try126.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_127 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try127.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_128 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try128.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_129 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try129.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_130 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try130.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_131 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try131.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_132 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try132.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_133 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try133.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_134 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try134.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_135 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try135.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_136 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try136.off")
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT MonochromatingChopper1 = MultiDiskChopper(
+ slit_center = theta_pos_M1, slit_width = theta_width_M1,
+ nslits = nslits_M1, delta_y = delta_y_M1,
+ nu = f_M1, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_M1, isfirst = 0,
+ phase = phase_M, radius = radius_M1,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.8166097806955753, 0.0, 162.0 -0.005) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT MonochromatingChopper2 = MultiDiskChopper(
+ slit_center = theta_pos_M2, slit_width = theta_width_M2,
+ nslits = nslits_M2, delta_y = delta_y_M2,
+ nu = f_M2, nrev = 0,
+ ratio = 1, jitter = 0,
+ delay = delay_M2, isfirst = 0,
+ phase = phase_M, radius = radius_M2,
+ equal = 0, abs_out = 0,
+ verbose = 0)
+AT (0.8166097806955753, 0.0, 162.0 + 0.005) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT M_monitor_flux = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.040,
+ yheight = 0.050, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "flux bins=1",
+ filename = "M_flux.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE MonochromatingChopper2
+ROTATED (0.0, 0.0, 0.0) RELATIVE MonochromatingChopper2
+
+COMPONENT M_monitor_hdiv = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.040,
+ yheight = 0.050, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "hdiv limits [-2.0:2.0] bins = 100",
+ filename = "M_monitor_hdiv.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE M_monitor_flux
+ROTATED (0.0, 0.0, 0.0) RELATIVE M_monitor_flux
+
+COMPONENT M_monitor_vdiv = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.040,
+ yheight = 0.050, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "vdiv limits [-2.0:2.0] bins = 100",
+ filename = "M_monitor_vdiv.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE M_monitor_hdiv
+ROTATED (0.0, 0.0, 0.0) RELATIVE M_monitor_hdiv
+
+COMPONENT M_monitor_lam = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.040,
+ yheight = 0.050, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "lambda limits [.5:5] bins = 1301",
+ filename = "M_monitor_lam.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE M_monitor_vdiv
+ROTATED (0.0, 0.0, 0.0) RELATIVE M_monitor_vdiv
+
+COMPONENT M_monitor_xy = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.050,
+ yheight = 0.065, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "x limits [-0.025:0.025] bins = 100, y limits [-0.0325:0.0325] bins = 100",
+ filename = "M_monitor_xy.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE M_monitor_lam
+ROTATED (0.0, 0.0, 0.0) RELATIVE M_monitor_lam
+
+COMPONENT M_monitor_ToF = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.04,
+ yheight = 0.050, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = setM,
+ filename = "M_monitor_tof.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE M_monitor_xy
+ROTATED (0.0, 0.0, 0.0) RELATIVE M_monitor_xy
+
+COMPONENT slitMC = Slit(
+ xmin = UNSET, xmax = UNSET,
+ ymin = UNSET, ymax = UNSET,
+ radius = UNSET, xwidth = 0.0205,
+ yheight = 0.0345)
+AT (0.817, 0, 162.07) ABSOLUTE
+
+COMPONENT guide_138 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try138.off")
+WHEN (( coll == 0 ))
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_139 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try139.off")
+WHEN (( coll == 0 ))
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_140 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try140.off")
+WHEN (( coll == 0 ))
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT guide_141 = Guide_anyshape_r(
+ xwidth = 0, yheight = 0,
+ zdepth = 0, center = 0,
+ transmit = 0, R0 = 0.99,
+ Qc = 0.0219, alpha = 0,
+ m = 0, W = 0,
+ geometry = "./OFF_files/try141.off")
+WHEN (( coll == 0 ))
+AT (0, 0, 0) ABSOLUTE
+
+COMPONENT coll1 = Guide_honeycomb(
+ w1 = 0.03523, w2 = 0.02920,
+ l = 1.080, R0 = 0.995,
+ Qc = 0.0218, alpha = 4.38,
+ m = 1.0, W = 0.003,
+ nslit = 5, d = 0.0005,
+ mleftup = -1, mrightup = -1,
+ mleftdown = -1, mrightdown = -1,
+ mleft = -1, mright = -1,
+ G = 0)
+WHEN (( coll == 1 ))
+AT (0.817, 0, 162.07) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT coll2 = Guide_honeycomb(
+ w1 = 0.03523, w2 = 0.02920,
+ l = 1.080, R0 = 0.995,
+ Qc = 0.0218, alpha = 4.38,
+ m = 1.0, W = 0.003,
+ nslit = 10, d = 0.0005,
+ mleftup = -1, mrightup = -1,
+ mleftdown = -1, mrightdown = -1,
+ mleft = -1, mright = -1,
+ G = 0)
+WHEN (( coll == 2 ))
+AT (0.817, 0, 162.07) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT Sample_pos = Arm()
+AT (0.8301227276790154, 0.0, 163.8) ABSOLUTE
+ROTATED (0, 0.430122381481144, 0) ABSOLUTE
+
+COMPONENT sample_monitor_xy = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.1,
+ yheight = 0.05, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "x limits [-0.05:0.05] bins = 100, y limits [-0.025:0.025] bins = 100",
+ filename = "sample_monitor_xy.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE Sample_pos
+ROTATED (0.0, 0.0, 0.0) RELATIVE Sample_pos
+
+COMPONENT sample_monitor_div = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.055,
+ yheight = 0.075, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "hdiv limits [-1.5:1.5] bins = 100, vdiv limits [-1.0:1.0] bins = 100",
+ filename = "sample_monitor_div.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE sample_monitor_xy
+ROTATED (0.0, 0.0, 0.0) RELATIVE sample_monitor_xy
+
+COMPONENT sample_monitor_hdiv = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.055,
+ yheight = 0.075, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "hdiv limits [-2.0:2.0] bins = 100",
+ filename = "sample_monitor_hdiv.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE sample_monitor_div
+ROTATED (0.0, 0.0, 0.0) RELATIVE sample_monitor_div
+
+COMPONENT sample_monitor_vdiv = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.055,
+ yheight = 0.075, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "vdiv limits [-2.0:2.0] bins = 100",
+ filename = "sample_monitor_vdiv.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE sample_monitor_hdiv
+ROTATED (0.0, 0.0, 0.0) RELATIVE sample_monitor_hdiv
+
+COMPONENT sample_monitor_xhdiv = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.055,
+ yheight = 0.075, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = "x limits [-0.05:0.05] bins = 100, hdiv limits [-1.5:1.5] bins = 100",
+ filename = "sample_monitor_xhdiv.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE sample_monitor_vdiv
+ROTATED (0.0, 0.0, 0.0) RELATIVE sample_monitor_vdiv
+
+COMPONENT sample_monitor_ToF_BeamSize = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.01,
+ yheight = 0.03, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = setS,
+ filename = "sample_monitor_tof_BeamSize.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE sample_monitor_xhdiv
+ROTATED (0.0, 0.0, 0.0) RELATIVE sample_monitor_xhdiv
+
+COMPONENT sample_monitor_ToF_cm2 = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.01,
+ yheight = 0.01, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = setS,
+ filename = "sample_monitor_tof_1cm2.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE sample_monitor_ToF_BeamSize
+ROTATED (0.0, 0.0, 0.0) RELATIVE sample_monitor_ToF_BeamSize
+
+COMPONENT sample_monitor_ToF = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.075,
+ yheight = 0.05, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = setS,
+ filename = "sample_monitor_tof.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE sample_monitor_ToF_cm2
+ROTATED (0.0, 0.0, 0.0) RELATIVE sample_monitor_ToF_cm2
+
+COMPONENT sample_monitor_lam = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.055,
+ yheight = 0.075, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = setSL,
+ filename = "sample_monitor_lam.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 1E-6) RELATIVE sample_monitor_ToF
+ROTATED (0.0, 0.0, 0.0) RELATIVE sample_monitor_ToF
+
+COMPONENT Sample = Incoherent(
+ geometry = 0, radius = 0.05,
+ xwidth = 0, yheight = 0.05,
+ zdepth = 0, thickness = 0.003,
+ p_interact = 0.2, concentric = 0)
+AT (0, 0, 0.015) RELATIVE Sample_pos
+ROTATED (0, 0, 0) RELATIVE Sample_pos
+EXTEND %{
+
+if (!SCATTERED) ABSORB;
+    
+%}
+
+COMPONENT Trex_banana_det = Monitor_nD(
+ user1 = "", user2 = "",
+ user3 = "", xwidth = 0.055,
+ yheight = 0.075, zdepth = 0,
+ xmin = 0, xmax = 0,
+ ymin = 0, ymax = 0,
+ zmin = 0, zmax = 0,
+ bins = 0, min = -1e40,
+ max = 1e40, restore_neutron = 1,
+ radius = 0, options = square_options,
+ filename = "Trex_banana_tof_monitor.dat", geometry = "NULL",
+ nowritefile = 0, nexus_bins = 0,
+ username1 = "NULL", username2 = "NULL",
+ username3 = "NULL")
+AT (0, 0, 3) RELATIVE Sample
+ROTATED (0, 0, 0) RELATIVE Sample
+
+FINALLY 
+%{
+// Start of finally for generated TREX_vanad
+%}
+
+END
