@@ -29,7 +29,7 @@ def v_bin_norm(binner, event_object, vanad_object, mag_Q_dim = 'mag_Q'):
     return hist_event, hist_vanad, hist_norm
 
 
-def _calc_pulse_tof_centroid(tof_monitor,threshold=0, to_s=1e-6):
+def _calc_pulse_centroid(tof_monitor,threshold=0, to_s=1e-6):
     # Assumes all pulses are evenly spaced in xaxis - but isn't bin data??? confirm this
     # Confirm correct way to axis tof data - is xaxis correct????? 
     mask = tof_monitor.Intensity != threshold
@@ -38,19 +38,11 @@ def _calc_pulse_tof_centroid(tof_monitor,threshold=0, to_s=1e-6):
     weight_total = np.bincount(labels, weights=tof_monitor.Intensity)[1:]
 
     coms = weighted_sum / weight_total * to_s
+    coms = sc.array(dims=['tof'], values=coms, unit='s')
     return coms
 
 
-def _assign_time_on_monitor(event_object, pulse_centroids, gap = 0):
-    original_tof = event_object.coords['tof'].values
-    bin_indices = np.searchsorted(pulse_centroids - gap, original_tof, side='right') - 1
-    bin_indices = np.clip(bin_indices, 0, len(pulse_centroids) - 1)
-    tom_mapped = (pulse_centroids - gap)[bin_indices]
-
-    return tom_mapped
-
-
-def produce_trex_event_object(event_object, data_path, monitor_name, to_s=1e-6, gap = 0):
+def produce_trex_event_object(event_object, data_path, monitor_name, centroids=None, to_s=1e-6):
     """ """
 
     with mx.Read(data_path) as loaded_data:
@@ -63,13 +55,18 @@ def produce_trex_event_object(event_object, data_path, monitor_name, to_s=1e-6, 
         value=monitor_position, unit="m"
     )
 
-    centroids = _calc_pulse_tof_centroid(monitor)
-    assigned_time_on_monitor = _assign_time_on_monitor(event_object, centroids, gap=gap)
-    
-    event_object.coords['time_on_monitor'] = sc.array(dims=event_object.dims, values=assigned_time_on_monitor, unit='s')
+    if centroids is None:
+        centroids = _calc_pulse_centroid(monitor)
 
+    look_up_tab = sc.DataArray(
+    data=centroids,                     
+    coords={'tof': centroids})
+
+    tof_to_centroid = sc.lookup(look_up_tab, mode='previous')
+    event_object = event_object.transform_coords(time_on_monitor=tof_to_centroid)
 
     return event_object
+
 
 # Graph Functions
 
